@@ -1,1 +1,1 @@
-# TheGameOfGo
+# The Game of Go
