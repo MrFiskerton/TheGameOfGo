@@ -3,7 +3,9 @@ module Board (
     --Colour,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours, set, inBounds
+    neighbours,
+    set, put, get,
+    inBounds
 ) where
 
 import Data.List (nub)
@@ -82,9 +84,19 @@ inBounds (x, y) Board { width = w, height = h}
     | otherwise = True
 
 
--- | Set a piece on the board in point,
+-- | Set a piece on the board in point. Record will be removed if the given piece is Nothing
 set :: Point -> Maybe p -> Board p -> Board p
 set point piece = liftB $ Map.alter (const piece) point
+
+-- | Get the piece at the given position or 'Nothing'
+-- if there is no stone there or the position is incorrect.
+get :: Point -> Board p -> Maybe p
+get p = Map.lookup p . content
+
+-- | Put a piece on the board.
+put :: Point -> p -> Board p -> Board p
+put p = set p . Just
+
 -- -- |
 -- connected :: Position -> Board -> [Position]
 
