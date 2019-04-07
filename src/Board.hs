@@ -3,13 +3,14 @@ module Board (
     --Colour,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours,
+    neighbours, boundedNeighbours, connected,
     set, put, get,
     inBounds
 ) where
 
 import Data.List (nub)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 type Point = (Int, Int)
 
@@ -78,11 +79,14 @@ neighbours :: Point -> [Point]
 neighbours (x, y) = [ (x + dx, y + dy) | dx <- [-1..1], dy <- [-1..1], abs(dx + dy) == 1 ]
 
 -- | Check if point contains in a board
-inBounds :: Point -> Board p -> Bool
-inBounds (x, y) Board { width = w, height = h}
+inBounds :: Board p -> Point -> Bool
+inBounds Board { width = w, height = h} (x, y)
     | x < 1 || y < 1 || x > w || y > h = False
     | otherwise = True
 
+-- |
+boundedNeighbours :: Point -> Board p -> [Point]
+boundedNeighbours point b = filter (inBounds b) $ neighbours point
 
 -- | Set a piece on the board in point. Record will be removed if the given piece is Nothing
 set :: Point -> Maybe p -> Board p -> Board p
@@ -97,13 +101,14 @@ get p = Map.lookup p . content
 put :: Point -> p -> Board p -> Board p
 put p = set p . Just
 
--- -- |
--- connected :: Position -> Board -> [Position]
-
-
--- type Position = Point -> Piece
-
-
+-- | Get the positions of all the stones connected to the piece at the given point.
+connected :: Eq p => Point -> Board p -> Set.Set Point
+connected point b  = case get point b of Nothing    -> Set.empty
+                                         Just owner -> recur owner Set.empty [point]
+    where recur _ visited [] = visited
+          recur owner visited (point : pts) = let adjacent = boundedNeighbours point b
+                                                  inConnection x = x `Set.notMember` visited && get x b == Just owner
+                                              in  recur owner (Set.insert point visited) (pts ++ filter inConnection adjacent)
 
 
 

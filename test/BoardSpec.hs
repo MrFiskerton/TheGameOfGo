@@ -2,6 +2,7 @@ module BoardSpec (spec) where
 
 import Board
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Test.Hspec
 
 spec :: Spec
@@ -22,7 +23,7 @@ spec = do
                               ".x."]
                 expectations = [((1,2),Black),((1,3),White),((2,1),Black),((2,2),White),((2,3),Black),((3,2),Black)]
             in charboard charpiece asciiboard `shouldBe` Board {width = 3, height = 3, content = Map.fromList expectations}
-    describe "Board" $ do
+    describe "Board groups" $ do
         context "neighbours" $ do
             it "zero point" $
                 neighbours (0, 0) `shouldBe` [(-1,0),(0,-1),(0,1),(1,0)]
@@ -30,12 +31,34 @@ spec = do
                 neighbours (3, 3) `shouldBe` [(2,3),(3,2),(3,4),(4,3)]
             it "extreme point" $
                 neighbours (19, 19) `shouldBe` [(18,19),(19,18),(19,20),(20,19)]
+        context "boundedNeighbours" $ do
+            it "zero point" $
+                boundedNeighbours (0, 0) (board (19, 19)) `shouldBe` []
+            it "middle point" $
+                boundedNeighbours (3, 3) (board (19, 19)) `shouldBe` [(2,3),(3,2),(3,4),(4,3)]
+            it "extreme point" $
+                boundedNeighbours (19, 19) (board (19, 19)) `shouldBe` [(18,19),(19,18)]
+        context "connected" $ do
+            it "sigle" $
+                let b = charboard charpiece ["...", "x..", "..."]
+                in connected (1, 2) b `shouldBe` Set.singleton (1, 2)
+            it "group" $
+                let b = charboard charpiece ["x.x",
+                                             "xxx",
+                                             "..x"]
+                in connected (3, 3) b `shouldBe` Set.fromList [(1,2),(1,3),(2,2),(3,1),(3,2),(3,3)]
+            it "complex group" $
+                let b = charboard charpiece ["..x",
+                                             "x.x",
+                                             "..x"]
+                in connected (3, 3) b `shouldBe` Set.fromList [(3,1),(3,2),(3,3)]
+    describe "Board check" $
         context "inBounds" $ do
-            it "outside of empty board" $ inBounds (0, 0) (board (0, 0)) `shouldBe` False
-            it "outside" $ inBounds (0, 0) (board (3, 3)) `shouldBe` False
-            it "extreme outside" $ inBounds (4, 4) (board (3, 3)) `shouldBe` False
-            it "inside" $ inBounds (1, 1) (board (3, 3)) `shouldBe` True
-            it "extreme inside" $ inBounds (3, 3) (board (3, 3)) `shouldBe` True
+            it "outside of empty board" $ inBounds (board (0, 0)) (0, 0)`shouldBe` False
+            it "outside" $ inBounds (board (3, 3)) (0, 0) `shouldBe` False
+            it "extreme outside" $ inBounds (board (3, 3)) (4, 4) `shouldBe` False
+            it "inside" $ inBounds (board (3, 3)) (1, 1) `shouldBe` True
+            it "extreme inside" $ inBounds (board (3, 3)) (3, 3) `shouldBe` True
     describe "Board operations" $ do
         context "set" $ do
             it "commutativity" $
