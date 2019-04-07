@@ -1,3 +1,4 @@
+-- https://en.wikipedia.org/wiki/Rules_of_Go
 
 module Go where
 

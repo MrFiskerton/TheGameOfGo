@@ -3,13 +3,14 @@ module Board (
     --Colour,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours, boundedNeighbours, connected,
+    neighbours, boundedNeighbours, connected, liberties,
     set, put, get,
     inBounds
 ) where
 
 import Data.List (nub)
 import qualified Data.Map as Map
+import Data.Maybe (isNothing)
 import qualified Data.Set as Set
 
 type Point = (Int, Int)
@@ -85,8 +86,8 @@ inBounds Board { width = w, height = h} (x, y)
     | otherwise = True
 
 -- |
-boundedNeighbours :: Point -> Board p -> [Point]
-boundedNeighbours point b = filter (inBounds b) $ neighbours point
+boundedNeighbours :: Board p -> Point -> [Point]
+boundedNeighbours b point = filter (inBounds b) $ neighbours point
 
 -- | Set a piece on the board in point. Record will be removed if the given piece is Nothing
 set :: Point -> Maybe p -> Board p -> Board p
@@ -101,16 +102,23 @@ get p = Map.lookup p . content
 put :: Point -> p -> Board p -> Board p
 put p = set p . Just
 
--- | Get the positions of all the stones connected to the piece at the given point.
+-- | Get the positions of all the pieces connected to the piece at the given point.
 connected :: Eq p => Point -> Board p -> Set.Set Point
 connected point b  = case get point b of Nothing    -> Set.empty
                                          Just owner -> recur owner Set.empty [point]
     where recur _ visited [] = visited
-          recur owner visited (point : pts) = let adjacent = boundedNeighbours point b
-                                                  inConnection x = x `Set.notMember` visited && get x b == Just owner
-                                              in  recur owner (Set.insert point visited) (pts ++ filter inConnection adjacent)
+          recur owner visited (point' : pts) = let adjacent = boundedNeighbours b point'
+                                                   inConnection x = x `Set.notMember` visited && get x b == Just owner
+                                               in recur owner (Set.insert point' visited) (pts ++ filter inConnection adjacent)
 
-
+-- | Get the liberties (breath) of the connected stones at the given point.
+-- The liberty of a stone is an empty intersection adjacent to that stone or adjacent to a stone which is connected to that stone.
+liberties :: Eq p => Point -> Board p -> Set.Set Point
+liberties point b =
+    let connect = Set.toList $ connected point b
+        adjacent = map (Set.fromList . boundedNeighbours b) connect
+        candidates = Set.unions adjacent
+    in  Set.filter (isNothing . (`get` b)) candidates
 
 -- -- | A turn is either a pass or a move
 -- data Turn = Pass | Move Position

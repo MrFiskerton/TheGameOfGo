@@ -33,11 +33,11 @@ spec = do
                 neighbours (19, 19) `shouldBe` [(18,19),(19,18),(19,20),(20,19)]
         context "boundedNeighbours" $ do
             it "zero point" $
-                boundedNeighbours (0, 0) (board (19, 19)) `shouldBe` []
+                boundedNeighbours (board (19, 19)) (0, 0) `shouldBe` []
             it "middle point" $
-                boundedNeighbours (3, 3) (board (19, 19)) `shouldBe` [(2,3),(3,2),(3,4),(4,3)]
+                boundedNeighbours (board (19, 19)) (3, 3) `shouldBe` [(2,3),(3,2),(3,4),(4,3)]
             it "extreme point" $
-                boundedNeighbours (19, 19) (board (19, 19)) `shouldBe` [(18,19),(19,18)]
+                boundedNeighbours (board (19, 19)) (19, 19) `shouldBe` [(18,19),(19,18)]
         context "connected" $ do
             it "sigle" $
                 let b = charboard charpiece ["...", "x..", "..."]
@@ -52,6 +52,17 @@ spec = do
                                              "x.x",
                                              "..x"]
                 in connected (3, 3) b `shouldBe` Set.fromList [(3,1),(3,2),(3,3)]
+        context "liberties" $ do
+            it "dead" $
+                let b = charboard charpiece [".xx",
+                                             "xox",
+                                             ".x."]
+                in liberties (2, 2) b `shouldBe` Set.empty
+            it "complex" $
+                let b = charboard charpiece ["xxx",
+                                             "xx.",
+                                             ".x."]
+                in liberties (2, 2) b `shouldBe` Set.fromList [(1,1),(3,1),(3,2)]
     describe "Board check" $
         context "inBounds" $ do
             it "outside of empty board" $ inBounds (board (0, 0)) (0, 0)`shouldBe` False
