@@ -1,12 +1,13 @@
+
 module Go where
 
--- |
-data Game = Game {
+-- -- |
+-- data Game = Game {
 
-}
+-- }
 
--- |
-start :: Int -> Int -> Game
+-- -- |
+-- start :: Int -> Int -> Game
 
 data Score = Score {
           fromTerritory :: !Int
