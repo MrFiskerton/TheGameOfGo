@@ -3,14 +3,14 @@ module Board (
     PointOwner,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours, boundedNeighbours, hostileNeighbours, connected, liberties, enclosure,
+    neighbours, boundedNeighbours, hostileNeighbours, connected, liberties, enclosure, territories,
     set, put, get, remove, move,  kill, capture,
     inBounds, isConnected, isDead, isHostile
 ) where
 
 import Data.List (nub, nubBy)
 import qualified Data.Map as Map
-import Data.Maybe (isNothing, maybe)
+import Data.Maybe (fromMaybe, isNothing, maybe)
 import qualified Data.Set as Set
 
 type Point = (Int, Int)
@@ -198,3 +198,16 @@ enclosure point b =
         (Nothing, (_, pset))        -> (Nothing, pset)
         (Just _, _)                 -> (Nothing, connected point b)
 
+-- | Splits the board into the territories owned by the different players.
+territories :: Show p => Ord p => Board p -> Map.Map p (Set.Set Point)
+territories (Board w h b) =
+    let allpts = Set.fromList [ (x, y) | x <- [1..w], y <- [1..h] ]
+        visit partition unvisited
+            | Set.null unvisited = partition
+            | otherwise = visit partition' unvisited'
+                  where startp = Set.findMin unvisited
+                        (owner, pts) = enclosure startp $ Board w h b
+                        unvisited' = unvisited Set.\\ pts
+                        update = return . Set.union pts . fromMaybe Set.empty
+                        partition' = maybe partition (\o -> Map.alter update o partition) owner
+    in visit Map.empty allpts

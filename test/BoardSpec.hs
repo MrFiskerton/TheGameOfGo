@@ -7,22 +7,23 @@ import Test.Hspec
 
 spec :: Spec
 spec = do
-    describe "Peace form ASCII" $ do
-        it "black x" $ charpiece 'x' `shouldBe` Just Black
-        it "black X" $ charpiece 'X' `shouldBe` Just Black
-        it "white o" $ charpiece 'o' `shouldBe` Just White
-        it "white 0" $ charpiece '0' `shouldBe` Just White
-       -- it "empty ." $ charpiece '.' `shouldBe` Just Empty
-        it "otherwise char" $ charpiece '#' `shouldBe` Nothing
-    describe "Board from ASCII" $ do
-        it "empty" $ charboard charpiece [] `shouldBe` board (0, 0)
-        it "blank[3x3]" $ charboard charpiece ["...", "...", "..."] `shouldBe` board (3, 3)
-        it "complicated[3x3]" $
-            let asciiboard = ["ox.",
-                              "xox",
-                              ".x."]
-                expectations = [((1,2),Black),((1,3),White),((2,1),Black),((2,2),White),((2,3),Black),((3,2),Black)]
-            in charboard charpiece asciiboard `shouldBe` Board {width = 3, height = 3, content = Map.fromList expectations}
+    describe "From ASCII" $ do
+        context "piece" $ do
+            it "black x" $ charpiece 'x' `shouldBe` Just Black
+            it "black X" $ charpiece 'X' `shouldBe` Just Black
+            it "white o" $ charpiece 'o' `shouldBe` Just White
+            it "white 0" $ charpiece '0' `shouldBe` Just White
+        -- it "empty ." $ charpiece '.' `shouldBe` Just Empty
+            it "otherwise char" $ charpiece '#' `shouldBe` Nothing
+        context "board" $ do
+            it "empty" $ charboard charpiece [] `shouldBe` board (0, 0)
+            it "blank[3x3]" $ charboard charpiece ["...", "...", "..."] `shouldBe` board (3, 3)
+            it "complicated[3x3]" $
+                let asciiboard = ["ox.",
+                                "xox",
+                                ".x."]
+                    expectations = [((1,2),Black),((1,3),White),((2,1),Black),((2,2),White),((2,3),Black),((3,2),Black)]
+                in charboard charpiece asciiboard `shouldBe` Board {width = 3, height = 3, content = Map.fromList expectations}
     describe "Board groups" $ do
         context "neighbours" $ do
             it "zero point" $
@@ -98,6 +99,16 @@ spec = do
                                              "xxxx.."]
                     expected = Set.fromList [(1,1),(1,2),(1,3),(2,1),(2,3),(3,1),(3,3),(4,1),(4,2),(4,3)]
                 in enclosure (1, 1) b `shouldBe` (Nothing, expected)
+        context "territories" $
+            it "example" $
+                let b = charboard charpiece ["xxx..",
+                                             "x.x..",
+                                             "x.x..",
+                                             "x.x.o",
+                                             "xxxo."]
+                    expected = Map.fromList [(White,Set.fromList [(5,1)]),
+                                             (Black,Set.fromList [(2,2),(2,3),(2,4)])]
+                in territories b `shouldBe` expected
     describe "Board check" $ do
         context "inBounds" $ do
             it "outside of empty board" $ inBounds (board (0, 0)) (0, 0)`shouldBe` False
