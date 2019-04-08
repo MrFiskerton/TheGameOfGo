@@ -3,8 +3,8 @@ module Board (
     --Colour,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours, boundedNeighbours, hostileNeighbours, connected, liberties, capture, kill, move,
-    set, put, get, remove,
+    neighbours, boundedNeighbours, hostileNeighbours, connected, liberties,
+    set, put, get, remove, move,  kill, capture,
     inBounds, isConnected, isDead, isHostile
 ) where
 
@@ -138,7 +138,7 @@ capture p b
         where amount = Set.size ( connected p b)
               b' = kill p b
 
--- |
+-- | The piece at the given point owned by another player
 isHostile :: Eq p => Board p -> p -> Point -> Bool
 -- maybe applies the second argument to the third, when it is Just x, otherwise returns the first argument.
 isHostile b piece p = maybe False (/= piece) $ get p b
@@ -164,9 +164,3 @@ move p piece b =
         (suicidesPoints, selfCapture) = capture p totalOpponentCaptures
         totalBoard = if suicidesPoints /= 0 then b else selfCapture -- Suicides does not prohibit.
     in  (totalPoints, totalBoard)
-
--- -- | A turn is either a pass or a move
--- data Turn = Pass | Move Position
-
--- -- | Check if a turn is valid
--- isValid :: Turn -> Board -> Bool

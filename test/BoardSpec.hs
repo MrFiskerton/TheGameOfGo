@@ -63,41 +63,7 @@ spec = do
                                              "xx.",
                                              ".x."]
                 in liberties (2, 2) b `shouldBe` Set.fromList [(1,1),(3,1),(3,2)]
-        context "kill" $ do
-            it "simple" $
-                let b = charboard charpiece [".xx",
-                                             "xox",
-                                             ".x."]
-                    b' = set (2, 2) Nothing b
-                in kill (2, 2) b `shouldBe` b'
-            it "complex" $
-                let b = charboard charpiece [".xo",
-                                             "xoo",
-                                             ".xx"]
-                    b' = set (3, 2) Nothing $
-                         set (2, 2) Nothing $
-                         set (3, 3) Nothing b
-                in kill (2, 2) b `shouldBe` b'
-        context "capture" $ do
-            it "simple" $
-                let b = charboard charpiece [".xx",
-                                             "xox",
-                                             ".x."]
-                    b' = set (2, 2) Nothing b
-                in capture (2, 2) b `shouldBe` (1, b')
-            it "false positive" $
-                let b = charboard charpiece [".xx",
-                                             "xoo",
-                                             ".x."]
-                in capture (2, 2) b `shouldBe` (0, b)
-            it "complex" $
-                let b = charboard charpiece [".xo",
-                                             "xoo",
-                                             ".xx"]
-                    b' = set (3, 2) Nothing $
-                         set (2, 2) Nothing $
-                         set (3, 3) Nothing b
-                in capture (2, 2) b `shouldBe` (3, b')
+
     describe "Board check" $ do
         context "inBounds" $ do
             it "outside of empty board" $ inBounds (board (0, 0)) (0, 0)`shouldBe` False
@@ -155,6 +121,12 @@ spec = do
             it "empty" $
                 remove (3, 3) (set (2, 2) (Just Black) $ board (19, 19)) `shouldBe` Board {width = 19, height = 19, content = Map.fromList [((2,2),Black)]}
         context "move" $ do
+            it "put" $
+                let b = charboard charpiece ["xxxo.",
+                                             ".oox.",
+                                             "xo..."]
+                    b' = put (3, 1) Black b
+                in move (3, 1) Black b `shouldBe` (0, b')
             it "capture" $
                 let b = charboard charpiece [".xo..",
                                              "xoox.",
@@ -162,12 +134,11 @@ spec = do
                     b' = set (4, 3) (Just Black) $
                          kill (2, 2) b
                 in move (4, 3) Black b `shouldBe` (3, b')
-            it "put" $
+            it "suicide" $
                 let b = charboard charpiece ["xxxo.",
-                                             ".oox.",
-                                             "xo..."]
-                    b' = put (3, 1) Black b
-                in move (3, 1) Black b `shouldBe` (0, b')
+                                             ".oo..",
+                                             "oo..."]
+                in move (1, 2) Black b `shouldBe` (0, b)
             it "double capture" $
                 let b = charboard charpiece ["xxxo.",
                                              ".oo..",
@@ -176,13 +147,43 @@ spec = do
                          kill (1, 1) $
                          kill (1, 3) b
                 in move (1, 2) White b `shouldBe` (4, b')
-            it "suicide" $
-                let b = charboard charpiece ["xxxo.",
-                                             ".oo..",
-                                             "oo..."]
-                in move (1, 2) Black b `shouldBe` (0, b)
             it "double suicide" $
                 let b = charboard charpiece ["xxxo.",
                                              ".oo..",
                                              "xo..."]
                 in move (1, 2) Black b `shouldBe` (0, b)
+        context "kill" $ do
+            it "simple" $
+                let b = charboard charpiece [".xx",
+                                             "xox",
+                                             ".x."]
+                    b' = set (2, 2) Nothing b
+                in kill (2, 2) b `shouldBe` b'
+            it "complex" $
+                let b = charboard charpiece [".xo",
+                                             "xoo",
+                                             ".xx"]
+                    b' = set (3, 2) Nothing $
+                            set (2, 2) Nothing $
+                            set (3, 3) Nothing b
+                in kill (2, 2) b `shouldBe` b'
+        context "capture" $ do
+            it "simple" $
+                let b = charboard charpiece [".xx",
+                                             "xox",
+                                             ".x."]
+                    b' = set (2, 2) Nothing b
+                in capture (2, 2) b `shouldBe` (1, b')
+            it "false positive" $
+                let b = charboard charpiece [".xx",
+                                             "xoo",
+                                             ".x."]
+                in capture (2, 2) b `shouldBe` (0, b)
+            it "complex" $
+                let b = charboard charpiece [".xo",
+                                             "xoo",
+                                             ".xx"]
+                    b' = set (3, 2) Nothing $
+                            set (2, 2) Nothing $
+                            set (3, 3) Nothing b
+                in capture (2, 2) b `shouldBe` (3, b')

@@ -18,3 +18,6 @@ data Score = Score {
         total     :: !Rational
 } deriving (Eq, Show)
 
+
+-- -- | A turn is either a pass or a move
+-- data Turn = Pass | Move Position
