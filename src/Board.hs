@@ -3,9 +3,9 @@ module Board (
     --Colour,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours, boundedNeighbours, connected, liberties,
+    neighbours, boundedNeighbours, connected, liberties, capture,
     set, put, get,
-    inBounds
+    inBounds, isDead
 ) where
 
 import Data.List (nub)
@@ -120,23 +120,25 @@ liberties point b =
         candidates = Set.unions adjacent
     in  Set.filter (isNothing . (`get` b)) candidates
 
+-- -- | Check if a stone is dead
+isDead :: Eq p => Board p -> Point -> Bool
+isDead b point = Set.null $ liberties point b -- null - Is this the empty set?
+
+-- | Capture the connected stones at the given position if it dead.
+capture :: Eq p => Point -> Board p -> (Int, Board p)
+capture p b
+    | isDead b p = let connect = connected p b
+                       amount = Set.size connect
+                       remove = flip (Set.foldr Map.delete) connect
+                       b' = liftB remove b
+                    in (amount, b')
+    | otherwise = (0, b)
+
 -- -- | A turn is either a pass or a move
 -- data Turn = Pass | Move Position
 
-
-
--- outOfBoundsMessage :: Board -> Point -> Maybe String
-
--- inBounds :: Position -> Board -> Bool
-
--- -- | Check if a stone is dead
--- isDead :: Position -> Board -> Bool
-
 -- -- | Check if a turn is valid
 -- isValid :: Turn -> Board -> Bool
-
--- -- | Put a new stone on the field
--- put :: Turn -> Board -> Board
 
 -- -- |
 -- kill :: Position -> Board -> Board
