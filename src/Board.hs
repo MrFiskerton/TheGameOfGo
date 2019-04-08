@@ -4,8 +4,8 @@ module Board (
     Piece(..), charpiece,
     Board(..), board, charboard,
     neighbours, boundedNeighbours, hostileNeighbours, connected, liberties, capture, kill, move,
-    set, put, get,
-    inBounds, isDead, isHostile
+    set, put, get, remove,
+    inBounds, isConnected, isDead, isHostile
 ) where
 
 import Data.List (nub, nubBy)
@@ -96,6 +96,10 @@ get p = Map.lookup p . content
 put :: Point -> p -> Board p -> Board p
 put p = set p . Just
 
+-- | Remove a piece from the board.
+remove :: Point -> Board p -> Board p
+remove p = set p Nothing
+
 -- | Get the positions of all the pieces connected to the piece at the given point.
 connected :: Eq p => Point -> Board p -> Set.Set Point
 connected point b  = case get point b of Nothing    -> Set.empty
@@ -104,6 +108,10 @@ connected point b  = case get point b of Nothing    -> Set.empty
           recur owner visited (point' : pts) = let adjacent = boundedNeighbours b point'
                                                    inConnection x = x `Set.notMember` visited && get x b == Just owner
                                                in recur owner (Set.insert point' visited) (pts ++ filter inConnection adjacent)
+
+-- |
+isConnected :: Eq p => Board p -> Point -> Point -> Bool
+isConnected b p1 p2 = connected p1 b == connected p2 b
 
 -- | Get the liberties (breath) of the connected stones at the given point.
 -- The liberty of a stone is an empty intersection adjacent to that stone or adjacent to a stone which is connected to that stone.
@@ -149,14 +157,13 @@ move :: Eq p => Point -> p -> Board p
      -> (Int, Board p) -- ^  The number of opponents' stones captured and new board
 move p piece b =
     let b' = put p piece b
-        -- unique lider of a hostile stone group
-        unique = nubBy (\p1 p2 -> connected p1 b == connected p2 b) $ hostileNeighbours b piece p
-        -- try to capture them
-        (points, captures) = unzip $ map (`capture` b') unique
-        total = sum points
-        opponentCapture = foldl (combine Map.intersection) b' captures
-        (_, selfCapture) = capture p opponentCapture -- Suicides does not prohibit.
-    in  (total, selfCapture)
+        groups = nubBy (isConnected b) $ hostileNeighbours b piece p
+        (points, captures) = unzip $ map (`capture` b') groups
+        totalPoints = sum points
+        totalOpponentCaptures = foldl (combine Map.intersection) b' captures
+        (suicidesPoints, selfCapture) = capture p totalOpponentCaptures
+        totalBoard = if suicidesPoints /= 0 then b else selfCapture -- Suicides does not prohibit.
+    in  (totalPoints, totalBoard)
 
 -- -- | A turn is either a pass or a move
 -- data Turn = Pass | Move Position

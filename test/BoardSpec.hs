@@ -98,14 +98,6 @@ spec = do
                          set (2, 2) Nothing $
                          set (3, 3) Nothing b
                 in capture (2, 2) b `shouldBe` (3, b')
-        context "move" $
-            it "example" $
-                let b = charboard charpiece [".xo..",
-                                             "xoox.",
-                                             ".xx.."]
-                    b' = set (4, 3) (Just Black) $
-                         kill (2, 2) b
-                in move (4, 3) Black b `shouldBe` (3, b')
     describe "Board check" $ do
         context "inBounds" $ do
             it "outside of empty board" $ inBounds (board (0, 0)) (0, 0)`shouldBe` False
@@ -124,6 +116,17 @@ spec = do
                                              "xo.",
                                              ".x."]
                 in isDead b (2, 2) `shouldBe` False
+        context "isConnected" $ do
+            it "positive" $
+                let b = charboard charpiece [".xx",
+                                             "xox",
+                                             ".x."]
+                in isConnected b (2, 3) (3, 2) `shouldBe` True
+            it "negative" $
+                let b = charboard charpiece [".xx",
+                                             "xox",
+                                             ".x."]
+                in isConnected b (1, 2) (3, 3) `shouldBe` False
     describe "Board operations" $ do
         context "set" $ do
             it "commutativity" $
@@ -146,3 +149,40 @@ spec = do
                             set (3, 3) (Just Black) $ board (19, 19)) `shouldBe` Nothing
             it "unused piece" $
                 get (3, 3) (set (8, 8) (Just Black) (board (19, 19))) `shouldBe` Nothing
+        context "remove" $  do
+            it "non empty" $
+                remove (3, 3) (set (3, 3) (Just Black) $ board (19, 19)) `shouldBe` board (19, 19)
+            it "empty" $
+                remove (3, 3) (set (2, 2) (Just Black) $ board (19, 19)) `shouldBe` Board {width = 19, height = 19, content = Map.fromList [((2,2),Black)]}
+        context "move" $ do
+            it "capture" $
+                let b = charboard charpiece [".xo..",
+                                             "xoox.",
+                                             ".xx.."]
+                    b' = set (4, 3) (Just Black) $
+                         kill (2, 2) b
+                in move (4, 3) Black b `shouldBe` (3, b')
+            it "put" $
+                let b = charboard charpiece ["xxxo.",
+                                             ".oox.",
+                                             "xo..."]
+                    b' = put (3, 1) Black b
+                in move (3, 1) Black b `shouldBe` (0, b')
+            it "double capture" $
+                let b = charboard charpiece ["xxxo.",
+                                             ".oo..",
+                                             "xo..."]
+                    b' = put (1, 2) White $
+                         kill (1, 1) $
+                         kill (1, 3) b
+                in move (1, 2) White b `shouldBe` (4, b')
+            it "suicide" $
+                let b = charboard charpiece ["xxxo.",
+                                             ".oo..",
+                                             "oo..."]
+                in move (1, 2) Black b `shouldBe` (0, b)
+            it "double suicide" $
+                let b = charboard charpiece ["xxxo.",
+                                             ".oo..",
+                                             "xo..."]
+                in move (1, 2) Black b `shouldBe` (0, b)
