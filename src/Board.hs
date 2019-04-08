@@ -3,9 +3,9 @@ module Board (
     --Colour,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours, boundedNeighbours, connected, liberties, capture, kill, move,
+    neighbours, boundedNeighbours, hostileNeighbours, connected, liberties, capture, kill, move,
     set, put, get,
-    inBounds, isDead, isOtherPlayer
+    inBounds, isDead, isHostile
 ) where
 
 import Data.List (nub, nubBy)
@@ -63,16 +63,6 @@ charboard char2piece array2D =
         cell2piece x y b char = set (x, y) (char2piece char) b
     -- | Reverce. Row 1 at the bottom
     in array2board (board (w, h)) (reverse array2D)
-
--- | Modify a board by just modifying its map.
-liftB :: (Map.Map Point p -> Map.Map Point q) -> (Board p -> Board q)
-liftB f (Board w h m) = Board w h (f m)
-
--- | Modify a board by combining two maps of board's.
-liftB2 :: (Map.Map Point p -> Map.Map Point q -> Map.Map Point r)
-       -> (Board p -> Board q -> Board r)
-liftB2 operation (Board w h p) (Board _ _ q) = Board w h (p `operation` q)
-
 ----------------------------------------------------------------------------------
 
 -- | All surrounding stones of a current position
@@ -89,9 +79,13 @@ inBounds Board { width = w, height = h} (x, y)
 boundedNeighbours :: Board p -> Point -> [Point]
 boundedNeighbours b point = filter (inBounds b) $ neighbours point
 
+-- | Modify a board by modifying its map.
+update :: (Map.Map Point p -> Map.Map Point q) -> (Board p -> Board q)
+update f (Board w h m) = Board w h (f m)
+
 -- | Set a piece on the board in point. Record will be removed if the given piece is Nothing
 set :: Point -> Maybe p -> Board p -> Board p
-set point piece = liftB $ Map.alter (const piece) point
+set point piece = update $ Map.alter (const piece) point
 
 -- | Get the piece at the given position or 'Nothing'
 -- if there is no stone there or the position is incorrect.
@@ -126,7 +120,7 @@ isDead b point = Set.null $ liberties point b -- null - Is this the empty set?
 
 -- | Remove the connected stones at the given position
 kill :: Eq p => Point -> Board p -> Board p
-kill p b = liftB (flip (Set.foldr Map.delete) $ connected p b) b
+kill p b = update (flip (Set.foldr Map.delete) $ connected p b) b
 
 -- | Capture the connected stones at the given position if it dead.
 capture :: Eq p => Point -> Board p -> (Int, Board p)
@@ -137,13 +131,18 @@ capture p b
               b' = kill p b
 
 -- |
-isOtherPlayer :: Eq p => Board p -> p -> Point -> Bool
+isHostile :: Eq p => Board p -> p -> Point -> Bool
 -- maybe applies the second argument to the third, when it is Just x, otherwise returns the first argument.
-isOtherPlayer b piece p = maybe False (/= piece) $ get p b
+isHostile b piece p = maybe False (/= piece) $ get p b
 
 -- |
 hostileNeighbours :: Eq p => Board p -> p -> Point -> [Point]
-hostileNeighbours b piece p = filter (isOtherPlayer b piece) $ boundedNeighbours b p
+hostileNeighbours b piece p = filter (isHostile b piece) $ boundedNeighbours b p
+
+-- | Modify a board by combining two maps.
+combine :: (Map.Map Point p -> Map.Map Point q -> Map.Map Point r)
+        -> (Board p -> Board q -> Board r)
+combine operation (Board w h p) (Board _ _ q) = Board w h (p `operation` q)
 
 -- | Put a stone for the given player at the given position and then capture opponents' stones and self-capture.
 move :: Eq p => Point -> p -> Board p
@@ -155,7 +154,7 @@ move p piece b =
         -- try to capture them
         (points, captures) = unzip $ map (`capture` b') unique
         total = sum points
-        opponentCapture = foldl (liftB2 Map.intersection) b' captures
+        opponentCapture = foldl (combine Map.intersection) b' captures
         (_, selfCapture) = capture p opponentCapture -- Suicides does not prohibit.
     in  (total, selfCapture)
 

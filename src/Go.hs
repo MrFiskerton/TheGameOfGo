@@ -2,18 +2,19 @@
 
 module Go where
 
--- -- |
--- data Game = Game {
+import Board
+import qualified Data.Set as Set
 
--- }
-
--- -- |
--- start :: Int -> Int -> Game
+data GameSession p = GameSession {
+    board  :: !(Board.Board p),
+    komi   :: !Rational,
+    passes :: !(Set.Set p)
+} deriving (Eq, Show)
 
 data Score = Score {
-          fromTerritory :: !Int
-        , fromCaptures  :: !Int
-        , fromKomi      :: !Rational
-    , total             :: !Rational
-    }deriving (Eq, Show)
+        territory :: !Int,
+        captures  :: !Int,
+        komipoint :: !Rational,
+        total     :: !Rational
+} deriving (Eq, Show)
 
