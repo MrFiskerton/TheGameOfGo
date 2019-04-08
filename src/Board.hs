@@ -3,14 +3,14 @@ module Board (
     --Colour,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours, boundedNeighbours, connected, liberties, capture,
+    neighbours, boundedNeighbours, connected, liberties, capture, kill, move,
     set, put, get,
-    inBounds, isDead
+    inBounds, isDead, isOtherPlayer
 ) where
 
-import Data.List (nub)
+import Data.List (nub, nubBy)
 import qualified Data.Map as Map
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, maybe)
 import qualified Data.Set as Set
 
 type Point = (Int, Int)
@@ -120,28 +120,47 @@ liberties point b =
         candidates = Set.unions adjacent
     in  Set.filter (isNothing . (`get` b)) candidates
 
--- -- | Check if a stone is dead
+-- | Check if a stone is dead
 isDead :: Eq p => Board p -> Point -> Bool
 isDead b point = Set.null $ liberties point b -- null - Is this the empty set?
+
+-- | Remove the connected stones at the given position
+kill :: Eq p => Point -> Board p -> Board p
+kill p b = liftB (flip (Set.foldr Map.delete) $ connected p b) b
 
 -- | Capture the connected stones at the given position if it dead.
 capture :: Eq p => Point -> Board p -> (Int, Board p)
 capture p b
-    | isDead b p = let connect = connected p b
-                       amount = Set.size connect
-                       remove = flip (Set.foldr Map.delete) connect
-                       b' = liftB remove b
-                    in (amount, b')
+    | isDead b p = (amount, b')
     | otherwise = (0, b)
+        where amount = Set.size ( connected p b)
+              b' = kill p b
+
+-- |
+isOtherPlayer :: Eq p => Board p -> p -> Point -> Bool
+-- maybe applies the second argument to the third, when it is Just x, otherwise returns the first argument.
+isOtherPlayer b piece p = maybe False (/= piece) $ get p b
+
+-- |
+hostileNeighbours :: Eq p => Board p -> p -> Point -> [Point]
+hostileNeighbours b piece p = filter (isOtherPlayer b piece) $ boundedNeighbours b p
+
+-- | Put a stone for the given player at the given position and then capture opponents' stones and self-capture.
+move :: Eq p => Point -> p -> Board p
+     -> (Int, Board p) -- ^  The number of opponents' stones captured and new board
+move p piece b =
+    let b' = put p piece b
+        -- unique lider of a hostile stone group
+        unique = nubBy (\p1 p2 -> connected p1 b == connected p2 b) $ hostileNeighbours b piece p
+        -- try to capture them
+        (points, captures) = unzip $ map (`capture` b') unique
+        total = sum points
+        opponentCapture = foldl (liftB2 Map.intersection) b' captures
+        (_, selfCapture) = capture p opponentCapture -- Suicides does not prohibit.
+    in  (total, selfCapture)
 
 -- -- | A turn is either a pass or a move
 -- data Turn = Pass | Move Position
 
 -- -- | Check if a turn is valid
 -- isValid :: Turn -> Board -> Bool
-
--- -- |
--- kill :: Position -> Board -> Board
-
-
-

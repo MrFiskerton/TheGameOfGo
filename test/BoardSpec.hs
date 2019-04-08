@@ -63,6 +63,21 @@ spec = do
                                              "xx.",
                                              ".x."]
                 in liberties (2, 2) b `shouldBe` Set.fromList [(1,1),(3,1),(3,2)]
+        context "kill" $ do
+            it "simple" $
+                let b = charboard charpiece [".xx",
+                                             "xox",
+                                             ".x."]
+                    b' = set (2, 2) Nothing b
+                in kill (2, 2) b `shouldBe` b'
+            it "complex" $
+                let b = charboard charpiece [".xo",
+                                             "xoo",
+                                             ".xx"]
+                    b' = set (3, 2) Nothing $
+                         set (2, 2) Nothing $
+                         set (3, 3) Nothing b
+                in kill (2, 2) b `shouldBe` b'
         context "capture" $ do
             it "simple" $
                 let b = charboard charpiece [".xx",
@@ -81,9 +96,16 @@ spec = do
                                              ".xx"]
                     b' = set (3, 2) Nothing $
                          set (2, 2) Nothing $
-                         set (3, 3) Nothing $ b
+                         set (3, 3) Nothing b
                 in capture (2, 2) b `shouldBe` (3, b')
-
+        context "move" $
+            it "example" $
+                let b = charboard charpiece [".xo..",
+                                             "xoox.",
+                                             ".xx.."]
+                    b' = set (4, 3) (Just Black) $
+                         kill (2, 2) b
+                in move (4, 3) Black b `shouldBe` (3, b')
     describe "Board check" $ do
         context "inBounds" $ do
             it "outside of empty board" $ inBounds (board (0, 0)) (0, 0)`shouldBe` False
