@@ -63,7 +63,41 @@ spec = do
                                              "xx.",
                                              ".x."]
                 in liberties (2, 2) b `shouldBe` Set.fromList [(1,1),(3,1),(3,2)]
-
+        context "enclosure" $ do
+            it "empty board" $
+                let b = board (19, 19) :: Board ()
+                    expected = Set.fromList [ (x, y) | x <- [1..19], y <- [1..19]                   ]
+                in  enclosure (1, 1) b `shouldBe` (Nothing, expected)
+            it "inside square" $
+                let b = charboard charpiece ["xxxx..",
+                                             "x..x..",
+                                             "xxxx.."]
+                    expected = Set.fromList [(2,2),(3,2)]
+                in enclosure (2, 2) b `shouldBe`  (Just Black, expected)
+            it "nothing outside square" $
+                let b = charboard charpiece ["xxxx..",
+                                             "x..x..",
+                                             "xxxx.."]
+                    expected = Set.singleton (1, 5)
+                in enclosure (1, 5) b `shouldBe` (Nothing, expected)
+            it "no owner" $
+                let b = charboard charpiece ["xxxx..",
+                                             "x..x.o",
+                                             "xxxxo."]
+                    expected = Set.fromList [(5,2),(5,3),(6,3)]
+                in enclosure (6, 3) b `shouldBe`  (Nothing, expected)
+            it "hosile obtain" $
+                let b = charboard charpiece ["xxxx..",
+                                             "x..x.o",
+                                             "xxxxo."]
+                    expected = Set.singleton (6, 1)
+                in enclosure (6, 1) b `shouldBe`  (Just White, expected)
+            it "nothing on enclosure" $
+                let b = charboard charpiece ["xxxx..",
+                                             "x..x..",
+                                             "xxxx.."]
+                    expected = Set.fromList [(1,1),(1,2),(1,3),(2,1),(2,3),(3,1),(3,3),(4,1),(4,2),(4,3)]
+                in enclosure (1, 1) b `shouldBe` (Nothing, expected)
     describe "Board check" $ do
         context "inBounds" $ do
             it "outside of empty board" $ inBounds (board (0, 0)) (0, 0)`shouldBe` False

@@ -1,9 +1,9 @@
 module Board (
     Point,
-    --Colour,
+    PointOwner,
     Piece(..), charpiece,
     Board(..), board, charboard,
-    neighbours, boundedNeighbours, hostileNeighbours, connected, liberties,
+    neighbours, boundedNeighbours, hostileNeighbours, connected, liberties, enclosure,
     set, put, get, remove, move,  kill, capture,
     inBounds, isConnected, isDead, isHostile
 ) where
@@ -18,6 +18,19 @@ type Point = (Int, Int)
 -- | Each point on the grid may be colored black, white or empty.
 -- data Colour = Black | White deriving (Eq, Enum, Show)
 data Piece = Empty | White | Black deriving (Eq, Show, Ord)
+
+-- | A state type for enclosure
+data PointOwner p = NoOne     -- ^ if there is a collision
+                  | Single p  -- ^ only one player can reach
+                  | Unknown
+
+-- | Update owner state
+updateOwner :: Eq p => PointOwner p -> Maybe p -> PointOwner p
+updateOwner NoOne _ = NoOne
+updateOwner (Single p) (Just q) | p == q    = Single p
+                                | otherwise = NoOne
+updateOwner Unknown (Just p) = Single p
+updateOwner owner Nothing = owner
 
 -- | Make a piece from char
 charpiece :: Char -> Maybe Piece
@@ -80,12 +93,12 @@ boundedNeighbours :: Board p -> Point -> [Point]
 boundedNeighbours b point = filter (inBounds b) $ neighbours point
 
 -- | Modify a board by modifying its map.
-update :: (Map.Map Point p -> Map.Map Point q) -> (Board p -> Board q)
-update f (Board w h m) = Board w h (f m)
+updateBoard :: (Map.Map Point p -> Map.Map Point q) -> (Board p -> Board q)
+updateBoard f (Board w h m) = Board w h (f m)
 
 -- | Set a piece on the board in point. Record will be removed if the given piece is Nothing
 set :: Point -> Maybe p -> Board p -> Board p
-set point piece = update $ Map.alter (const piece) point
+set point piece = updateBoard $ Map.alter (const piece) point
 
 -- | Get the piece at the given position or 'Nothing'
 -- if there is no stone there or the position is incorrect.
@@ -128,7 +141,7 @@ isDead b point = Set.null $ liberties point b -- null - Is this the empty set?
 
 -- | Remove the connected stones at the given position
 kill :: Eq p => Point -> Board p -> Board p
-kill p b = update (flip (Set.foldr Map.delete) $ connected p b) b
+kill p b = updateBoard (flip (Set.foldr Map.delete) $ connected p b) b
 
 -- | Capture the connected stones at the given position if it dead.
 capture :: Eq p => Point -> Board p -> (Int, Board p)
@@ -148,9 +161,9 @@ hostileNeighbours :: Eq p => Board p -> p -> Point -> [Point]
 hostileNeighbours b piece p = filter (isHostile b piece) $ boundedNeighbours b p
 
 -- | Modify a board by combining two maps.
-combine :: (Map.Map Point p -> Map.Map Point q -> Map.Map Point r)
-        -> (Board p -> Board q -> Board r)
-combine operation (Board w h p) (Board _ _ q) = Board w h (p `operation` q)
+combineBoards :: (Map.Map Point p -> Map.Map Point q -> Map.Map Point r)
+              -> (Board p -> Board q -> Board r)
+combineBoards operation (Board w h p) (Board _ _ q) = Board w h (p `operation` q)
 
 -- | Put a stone for the given player at the given position and then capture opponents' stones and self-capture.
 move :: Eq p => Point -> p -> Board p
@@ -160,7 +173,28 @@ move p piece b =
         groups = nubBy (isConnected b) $ hostileNeighbours b piece p
         (points, captures) = unzip $ map (`capture` b') groups
         totalPoints = sum points
-        totalOpponentCaptures = foldl (combine Map.intersection) b' captures
+        totalOpponentCaptures = foldl (combineBoards Map.intersection) b' captures
         (suicidesPoints, selfCapture) = capture p totalOpponentCaptures
         totalBoard = if suicidesPoints /= 0 then b else selfCapture -- Suicides does not prohibit.
     in  (totalPoints, totalBoard)
+
+-- | Gets the owner of enclosure
+-- Starting search from the given point, stopping at points occupied by stones.
+-- A player owns the enclosure if all stones found during the search operation belong to that player,
+-- and at least one such stone is found.
+enclosure :: Eq p => Point -> Board p -- ^ Starting point and board
+          -> (Maybe p, Set.Set Point) -- ^ Return a player who should receive points for the enclosure (or no one)
+                                      -- and a set of all the points enclosed in the area
+enclosure point b =
+    let recur owner visited [] = (owner, visited)
+        recur owner visited (p : pts) = recur owner' visited' pts'
+            where   adjacent = boundedNeighbours b p
+                    owner' = foldl updateOwner owner $ map (`get` b) adjacent
+                    newpts = filter (\x -> x `Set.notMember` visited && isNothing (get x b)) adjacent
+                    visited' = Set.unions [Set.singleton p, Set.fromList newpts, visited]
+                    pts' = pts ++ newpts
+    in case (get point b, recur Unknown Set.empty [point]) of
+        (Nothing, (Single p, pset)) -> (Just p,  pset)
+        (Nothing, (_, pset))        -> (Nothing, pset)
+        (Just _, _)                 -> (Nothing, connected point b)
+
