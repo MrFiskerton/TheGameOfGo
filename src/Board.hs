@@ -13,6 +13,7 @@ import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, isNothing, maybe)
 import qualified Data.Set as Set
 
+-- | Represents a position on the board
 type Point = (Int, Int)
 
 -- | Each point on the grid may be colored black, white or empty.
@@ -41,6 +42,7 @@ charpiece c
     | otherwise = Nothing
 
 ----------------------------------------------------------------------------------
+-- | The board for table game
 data Board piece = Board {
                      width   :: !Int
                    , height  :: !Int
@@ -61,7 +63,7 @@ board (w, h)
     --     content = Map.fromList [ ((x, y), Empty) | x <- [1..w], y <- [1..h] ]
     -- }
 
--- |
+-- | Make a board from ascii
 charboard :: (Char -> Maybe piece) -- ^ char to piece interpretation
           -> [String]              -- ^ board
           -> Board piece
@@ -88,7 +90,7 @@ inBounds Board { width = w, height = h} (x, y)
     | x < 1 || y < 1 || x > w || y > h = False
     | otherwise = True
 
--- |
+-- | Get valid neighbours
 boundedNeighbours :: Board p -> Point -> [Point]
 boundedNeighbours b point = filter (inBounds b) $ neighbours point
 
@@ -122,7 +124,7 @@ connected point b  = case get point b of Nothing    -> Set.empty
                                                    inConnection x = x `Set.notMember` visited && get x b == Just owner
                                                in recur owner (Set.insert point' visited) (pts ++ filter inConnection adjacent)
 
--- |
+-- | Check if piece A and piece B in one group
 isConnected :: Eq p => Board p -> Point -> Point -> Bool
 isConnected b p1 p2 = connected p1 b == connected p2 b
 
@@ -199,7 +201,7 @@ enclosure point b =
         (Just _, _)                 -> (Nothing, connected point b)
 
 -- | Splits the board into the territories owned by the different players.
-territories :: Show p => Ord p => Board p -> Map.Map p (Set.Set Point)
+territories :: Ord p => Board p -> Map.Map p (Set.Set Point)
 territories (Board w h b) =
     let allpts = Set.fromList [ (x, y) | x <- [1..w], y <- [1..h] ]
         visit partition unvisited
