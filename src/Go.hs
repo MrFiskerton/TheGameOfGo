@@ -72,7 +72,7 @@ nextplayer session | isGameOver session = Nothing
 
 -- |
 -- Ko happends when a player may not play a move that causes the board to return to any previous state.
-data InvalidMove = OutOfBounds | Suicide | Ko | Occupied | GameOver
+data InvalidMove = OutOfBounds | Suicide | Ko | Occupied | GameOver deriving (Eq, Show)
 
 -- | A turn is either a pass or a move
 -- data Turn = Pass | Move Position
