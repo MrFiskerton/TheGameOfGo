@@ -28,7 +28,9 @@ source-repository head
 library
   exposed-modules:
         Board, 
-        Go
+        Go,
+        Images,
+        Runner
   hs-source-dirs: src
   build-depends:
         base >=4.7 && <5,
