@@ -4,7 +4,8 @@ module Go (
     GoGameSession(..), gosession,
     Score(..), score, gamescore,
     isGameOver,
-    move, nextqueue
+    move, pass,
+    nextqueue, nextplayer
 ) where
 
 import qualified Board
@@ -65,16 +66,22 @@ nextqueue GoGameSession{ players = p:ps, turnqueue = []} = (p, ps) -- fill queue
 nextqueue _                                              = error "Game is over"
 
 -- |
+nextplayer :: Ord p => GoGameSession p -> Maybe p
+nextplayer session | isGameOver session = Nothing
+                   | otherwise = Just (fst $ nextqueue session)
+
+-- |
 -- Ko happends when a player may not play a move that causes the board to return to any previous state.
 data InvalidMove = OutOfBounds | Suicide | Ko | Occupied | GameOver
 
 -- | A turn is either a pass or a move
 -- data Turn = Pass | Move Position
 
+-- | A move turn for the current player
 move :: Ord p => Board.Point -> GoGameSession p -> Either InvalidMove (GoGameSession p)
 move point session@GoGameSession{board = b, boardhistory = bhistory, captures = cap, passes = pas}
   | not $ Board.inBounds b point          = Left OutOfBounds
-  | Board.get point board' /= Just player = Left Suicide
+  | Board.get point board' /= Just player = Left Suicide -- in this case board' == board
   | board' `Set.member` bhistory          = Left Ko
   | isJust $ Board.get point b            = Left Occupied
   | isGameOver session                    = Left GameOver
@@ -87,4 +94,12 @@ move point session@GoGameSession{board = b, boardhistory = bhistory, captures = 
                         where
                             (player, turnqueue') = nextqueue session
                             (capturepoints, board') = Board.move point player b
+
+-- | A pass turn for the current player
+pass :: Ord p => GoGameSession p -> Either InvalidMove (GoGameSession p)
+pass session | isGameOver session = Left GameOver
+             | otherwise = let (player, queue') = nextqueue session
+                           in Right $ session { turnqueue = queue'
+                                              , passes = Set.insert player $ passes session
+                                              }
 
