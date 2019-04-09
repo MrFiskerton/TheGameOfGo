@@ -51,7 +51,7 @@ test-suite TheGameOfGo-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      BoardSpec
+      BoardSpec, GoSpec
   hs-source-dirs: test
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
