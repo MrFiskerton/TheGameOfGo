@@ -4,7 +4,7 @@ module Go (
     GoGameSession(..), gosession,
     Score(..), score, gamescore,
     isGameOver,
-    move, pass,
+    InvalidMove(..), move, pass,
     nextqueue, nextplayer
 ) where
 
@@ -82,8 +82,8 @@ move :: Ord p => Board.Point -> GoGameSession p -> Either InvalidMove (GoGameSes
 move point session@GoGameSession{board = b, boardhistory = bhistory, captures = cap, passes = pas}
   | not $ Board.inBounds b point          = Left OutOfBounds
   | Board.get point board' /= Just player = Left Suicide -- in this case board' == board
-  | board' `Set.member` bhistory          = Left Ko
   | isJust $ Board.get point b            = Left Occupied
+  | board' `Set.member` bhistory          = Left Ko
   | isGameOver session                    = Left GameOver
   | otherwise = Right $ session { board = board'
                                 , turnqueue = turnqueue'
