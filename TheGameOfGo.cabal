@@ -32,7 +32,9 @@ library
   hs-source-dirs: src
   build-depends:
         base >=4.7 && <5,
-        containers
+        containers,
+        gloss,
+        gloss-juicy
 
   default-language: Haskell2010
   ghc-options: -Wall
@@ -44,7 +46,9 @@ executable TheGameOfGo-exe
   build-depends:
         TheGameOfGo,
         base >=4.7 && <5,
-        containers
+        containers,
+        gloss,
+        gloss-juicy
   default-language: Haskell2010
 
 test-suite TheGameOfGo-test
