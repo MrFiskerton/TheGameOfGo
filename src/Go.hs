@@ -2,15 +2,19 @@
 
 module Go (
     GoGameSession(..), gosession,
-    Score(..), score, gamescore
+    Score(..), score, gamescore,
+    isGameOver,
+    move, nextqueue
 ) where
 
 import qualified Board
 import qualified Data.Map as Map
+import Data.Maybe (isJust)
 import qualified Data.Set as Set
 
 data GoGameSession p = GoGameSession {
     players      :: ![p],
+    turnqueue    :: ![p],
     board        :: !(Board.Board p),
     boardhistory :: !(Set.Set (Board.Board p)),
     komi         :: !(Map.Map p Rational),
@@ -23,6 +27,7 @@ gosession :: Ord p => Int -> Int -> [p] -> Map.Map p Rational -> GoGameSession p
 gosession w h pl k =
     GoGameSession {
         players = pl,
+        turnqueue = pl,
         board = Board.board (w, h),
         boardhistory = Set.singleton $ Board.board (w, h),
         komi = k `Map.union` Map.fromList (zip pl $ repeat 0), -- Set zero if not given
@@ -46,8 +51,40 @@ score session player = Score { territorypoint = t, capturepoint = c, komipoint =
             total' = fromIntegral t + fromIntegral c + k
 
 -- | Evaluate scores for each player.
-gamescore :: Show p => Ord p => GoGameSession p -> Map.Map p Score
+gamescore :: Ord p => GoGameSession p -> Map.Map p Score
 gamescore session = Map.fromList $ zip pl $ map (score session) pl where pl = players session
+
+-- | Check if game is over
+isGameOver :: Ord p => GoGameSession p -> Bool
+isGameOver session = Set.fromList (players session) `Set.isSubsetOf` passes session -- All players pass
+
+-- |
+nextqueue :: GoGameSession p -> (p, [p])
+nextqueue GoGameSession{ turnqueue = next : q'}          = (next, q')
+nextqueue GoGameSession{ players = p:ps, turnqueue = []} = (p, ps) -- fill queue
+nextqueue _                                              = error "Game is over"
+
+-- |
+-- Ko happends when a player may not play a move that causes the board to return to any previous state.
+data InvalidMove = OutOfBounds | Suicide | Ko | Occupied | GameOver
 
 -- | A turn is either a pass or a move
 -- data Turn = Pass | Move Position
+
+move :: Ord p => Board.Point -> GoGameSession p -> Either InvalidMove (GoGameSession p)
+move point session@GoGameSession{board = b, boardhistory = bhistory, captures = cap, passes = pas}
+  | not $ Board.inBounds b point          = Left OutOfBounds
+  | Board.get point board' /= Just player = Left Suicide
+  | board' `Set.member` bhistory          = Left Ko
+  | isJust $ Board.get point b            = Left Occupied
+  | isGameOver session                    = Left GameOver
+  | otherwise = Right $ session { board = board'
+                                , turnqueue = turnqueue'
+                                , boardhistory = Set.insert board' bhistory
+                                , captures = Map.adjust (+ capturepoints) player cap
+                                , passes = Set.delete player pas
+                                }
+                        where
+                            (player, turnqueue') = nextqueue session
+                            (capturepoints, board') = Board.move point player b
+

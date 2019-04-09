@@ -5,7 +5,7 @@ module Board (
     Board(..), board, charboard,
     neighbours, boundedNeighbours, hostileNeighbours, connected, liberties, enclosure, territories,
     set, put, get, remove, move,  kill, capture,
-    inBounds, isConnected, isDead, isHostile
+    inBounds, isConnected, isDead, isHostile, isSuicide
 ) where
 
 import Data.List (nub, nubBy)
@@ -152,6 +152,10 @@ capture p b
     | otherwise = (0, b)
         where amount = Set.size ( connected p b)
               b' = kill p b
+
+-- |
+isSuicide :: Eq p => Board p -> Point -> Bool
+isSuicide b p = suicidespoints /= 0 where (suicidespoints, _ ) = capture p b
 
 -- | The piece at the given point owned by another player
 isHostile :: Eq p => Board p -> p -> Point -> Bool
