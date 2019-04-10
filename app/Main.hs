@@ -1,6 +1,9 @@
 module Main where
 
-import Lib
+import qualified Images
+import Runner
 
 main :: IO ()
-main = someFunc
+main = do
+      content <- Images.load
+      start content
