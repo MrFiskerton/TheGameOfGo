@@ -10,3 +10,12 @@
 8. The game ends after two consecutive passes.
 9. A player's score is the number of points of her color, plus the number of empty points that reach only her color.
 10. The player with the higher score at the end of the game is the winner. Equal scores result in a tie. 
+
+![Image](./screenshots/1.png)
+![Image](./screenshots/2.png)
+
+### Control
+
+Press left mouse booton to set a piece.
+
+Press right to pass a turn.
