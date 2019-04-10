@@ -5,11 +5,23 @@ module Runner (
 import qualified Board as B
 import qualified Data.Map as Map
 import Data.Ratio
-import Go
+import qualified Go as G
 import Graphics.Gloss
 import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Interface.Pure.Game
 import Images (Images (..))
+
+data Player = Player { name  :: !String
+                     , komi  :: !Rational
+                     , index :: !Int
+                     }
+                     deriving (Eq, Ord, Show)
+
+-- |
+goplayers :: [Player]
+goplayers  = [ Player "Black" 0 0
+             , Player "White" (6 + 1 % 2) 1
+             ]
 
 -- |
 both :: (a -> b) -> (a, a) -> (b, b)
@@ -25,19 +37,22 @@ start images =
     play window background fps game (renderer images) handler updater
       where window = InWindow "The Game of Go" size position
             size = both (* round cellsize) fieldsize
-            fieldsize = (19, 19)
+            fieldsize = (21, 21)
             cellsize = 32 :: Float
             position = (300, 300)
             k = 6 + 1 % 2
-            game = gosession 19 19 [B.Black, B.White] $ Map.singleton B.White k
+            game = G.gosession 19 19 goplayers (Map.fromList $ zip goplayers (map komi goplayers))
             background = white
             fps = 30
 -- |
-viewPort = ViewPort (both (negate . (/ 2) . subtract 32) $ cellToScreen (19, 19)) 0 1
+viewPort = ViewPort (both (negate . (/ 2) . subtract 32) $ cellToScreen (19 - 1, 19 - 1)) 0 1
 
 -- |
-renderer :: Images -> GoGameSession p -> Picture
-renderer images session =  pictures [imgwood images, grid 32 19 19]
+renderer :: Images -> G.GoGameSession Player -> Picture
+renderer images session@G.GoGameSession {G.board = b} =  pictures
+    [ imgwood images
+    , drawgrid 32 (19 - 1) (19 - 1)
+    , drawpieces 32 images b]
 
 type Size = Float
 
@@ -51,12 +66,23 @@ cellToScreen = both ((* 32) . fromIntegral)
 screenToCell = both (round . (/ 32)) . invertViewPort viewPort
 
 -- |
-grid :: Float -> Int -> Int -> Picture
-grid cellsize w h = applyViewPortToPicture viewPort $ pictures
+drawgrid :: Float -> Int -> Int -> Picture
+drawgrid cellsize w h = applyViewPortToPicture viewPort $ pictures
     [uncurry translate (cellToScreen (x, y)) $
-     color black $
-     rectangleWire cellsize cellsize | x <- [0 .. w - 1], y <- [0 .. h - 1]
+     color black $ rectangleWire cellsize cellsize
+    | x <- [0 .. w - 1], y <- [0 .. h - 1]
     ]
+
+drawpieces :: Float -> Images -> B.Board Player -> Picture
+drawpieces cellsize images board = applyViewPortToPicture viewPort $ pictures
+    [uncurry translate ( both (subtract 16) (cellToScreen (x , y)) ) $
+     drawcell x y
+     | x <- [0 .. w - 1], y <- [0 .. h - 1]
+    ]
+    where   w = B.width board
+            h = B.height board
+            drawcell x y = case B.get (x, y) board of Just p  -> imgpieces images !! index p
+                                                      Nothing -> imgpieces images !! 1
 
 -- grid k w h = color black $ Pictures $ fmap (line . resize k)
 --      [ [(0, 0), (1, 0)]
