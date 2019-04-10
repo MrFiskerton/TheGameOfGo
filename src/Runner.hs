@@ -82,7 +82,7 @@ drawpieces cellsize images board = applyViewPortToPicture viewPort $ pictures
     where   w = B.width board
             h = B.height board
             drawcell x y = case B.get (x, y) board of Just p  -> imgpieces images !! index p
-                                                      Nothing -> imgpieces images !! 1
+                                                      Nothing -> blank
 
 -- grid k w h = color black $ Pictures $ fmap (line . resize k)
 --      [ [(0, 0), (1, 0)]
@@ -90,4 +90,13 @@ drawpieces cellsize images board = applyViewPortToPicture viewPort $ pictures
 --      ]
 
 updater _ = id
-handler _ = id
+
+handler (EventKey (MouseButton LeftButton) Down _ mouse) session =
+    case G.move cell session of Right s -> s
+                                Left _  -> session
+    where cell = screenToCell mouse
+handler (EventKey (MouseButton RightButton) Down _ mouse) session =
+    case G.pass session of Right s -> s
+                           Left _  -> session
+
+handler _ session = session
