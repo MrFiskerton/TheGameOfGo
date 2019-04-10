@@ -45,7 +45,7 @@ start images =
             background = white
             fps = 30
 -- |
-viewPort = ViewPort (both (negate . (/ 2) . subtract 32) $ cellToScreen (19 - 1, 19 - 1)) 0 1
+viewPort = ViewPort (both (negate . (/ 2) . subtract 32) $ cellToScreen (18, 18)) 0 1 -- rotation , scale
 
 -- |
 renderer :: Images -> G.GoGameSession Player -> Picture
@@ -63,7 +63,11 @@ resize k = fmap (\ (x, y) -> (x * k, y * k))
 cellToScreen = both ((* 32) . fromIntegral)
 
 -- |
-screenToCell = both (round . (/ 32)) . invertViewPort viewPort
+gocellToScreen = both (subtract 16 . (* 32) . fromIntegral)
+-- |
+--screenToCell = both (round . (/ 32)) . invertViewPort viewPort
+-- |
+screenToGocell = both ((+ 1) . round . (/ 32) . (+ 16)) . invertViewPort viewPort
 
 -- |
 drawgrid :: Float -> Int -> Int -> Picture
@@ -75,14 +79,15 @@ drawgrid cellsize w h = applyViewPortToPicture viewPort $ pictures
 
 drawpieces :: Float -> Images -> B.Board Player -> Picture
 drawpieces cellsize images board = applyViewPortToPicture viewPort $ pictures
-    [uncurry translate ( both (subtract 16) (cellToScreen (x , y)) ) $
+    [uncurry translate (gocellToScreen (x , y)) $
      drawcell x y
-     | x <- [0 .. w - 1], y <- [0 .. h - 1]
+     | x <- [0 .. w - 1], y <- [0 .. w - 1]
     ]
     where   w = B.width board
             h = B.height board
-            drawcell x y = case B.get (x, y) board of Just p  -> imgpieces images !! index p
-                                                      Nothing -> blank
+            drawcell x y = case B.get (x + 1, y + 1) board of
+                Just p  -> imgpieces images !! index p
+                Nothing -> blank--color green $ rectangleSolid 29 29
 
 -- grid k w h = color black $ Pictures $ fmap (line . resize k)
 --      [ [(0, 0), (1, 0)]
@@ -94,7 +99,7 @@ updater _ = id
 handler (EventKey (MouseButton LeftButton) Down _ mouse) session =
     case G.move cell session of Right s -> s
                                 Left _  -> session
-    where cell = screenToCell mouse
+    where cell = screenToGocell mouse
 handler (EventKey (MouseButton RightButton) Down _ mouse) session =
     case G.pass session of Right s -> s
                            Left _  -> session
